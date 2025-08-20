@@ -1,0 +1,21 @@
+{
+  "name": "Meu PWA Simples",
+  "short_name": "PWA Simples",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#860d0d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/atom.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/python.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
