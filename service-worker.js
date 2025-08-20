@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meu-pwa-cache-v1';
+const CACHE_NAME = 'meu-pwa-cache-v2';
 const urlsToCache = [
     './',
     './index.html',
@@ -11,51 +11,45 @@ const urlsToCache = [
 // Instalação do Service Worker e cache inicial
 self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return Promise.all(
-                urlsToCache.map(url =>
-                    fetch(url).then(response => {
+        caches.open(CACHE_NAME)
+            .then(async cache => {
+                for (const url of urlsToCache) {
+                    try {
+                        const response = await fetch(url);
                         if (response.ok) {
-                            return cache.put(url, response);
+                            await cache.put(url, response.clone());
                         } else {
-                            console.warn("Não foi possível cachear:", url);
+                            console.warn('Não foi possível cachear:', url, 'Status:', response.status);
                         }
-                    }).catch(err => {
-                        console.warn("Erro ao buscar para cachear:", url, err);
-                    })
-                )
-            );
-        })
+                    } catch (err) {
+                        console.warn('Erro ao cachear:', url, err);
+                    }
+                }
+            })
     );
 });
 
 // Ativação do Service Worker e limpeza de caches antigos
 self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
+        caches.keys().then(cacheNames =>
+            Promise.all(
                 cacheNames.map(cache => {
-                    if (cache !== CACHE_NAME) {
-                        return caches.delete(cache);
-                    }
+                    if (cache !== CACHE_NAME) return caches.delete(cache);
                 })
-            );
-        })
+            )
+        )
     );
 });
 
 // Intercepta as requisições e responde com cache ou rede
 self.addEventListener('fetch', event => {
-    // Ignora requisições que não sejam http/https
-    if (!event.request.url.startsWith('http')) {
-        return;
-    }
+    // Ignora requisições não HTTP/HTTPS
+    if (!event.request.url.startsWith('http')) return;
 
     event.respondWith(
         caches.match(event.request).then(response => {
-            if (response) {
-                return response;
-            }
+            if (response) return response;
 
             return fetch(event.request).then(networkResponse => {
                 if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
@@ -63,13 +57,16 @@ self.addEventListener('fetch', event => {
                 }
 
                 const responseToCache = networkResponse.clone();
+
                 caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseToCache);
+                    cache.put(event.request, responseToCache).catch(err => {
+                        console.warn('Não foi possível adicionar ao cache:', event.request.url, err);
+                    });
                 });
 
                 return networkResponse;
             }).catch(err => {
-                console.warn("Falha ao buscar:", event.request.url, err);
+                console.warn('Falha no fetch:', event.request.url, err);
             });
         })
     );
